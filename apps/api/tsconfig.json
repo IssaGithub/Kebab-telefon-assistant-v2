@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "outDir": "dist",
+    "rootDir": "src",
+    "noEmit": false,
+    "paths": {
+      "@restaurant-ai/db": ["../../packages/db/src"],
+      "@restaurant-ai/shared": ["../../packages/shared/src"]
+    }
+  },
+  "include": ["src/**/*.ts"]
+}
+

@@ -1,0 +1,264 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OnboardingStatus {
+  draft
+  menu_imported
+  menu_verified
+  phone_connected
+  test_call_done
+  active
+  paused
+}
+
+enum OrderStatus {
+  draft
+  pending_restaurant
+  accepted
+  rejected
+  cancelled
+  completed
+}
+
+enum OrderFulfillmentType {
+  pickup
+  delivery
+}
+
+enum CallDirection {
+  inbound
+  outbound
+}
+
+enum CallStatus {
+  ringing
+  active
+  completed
+  failed
+  transferred
+}
+
+model Tenant {
+  id          String       @id @default(uuid())
+  name        String
+  slug        String       @unique
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  users       TenantUser[]
+  restaurants Restaurant[]
+}
+
+model User {
+  id        String       @id @default(uuid())
+  email     String       @unique
+  name      String?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  tenants   TenantUser[]
+}
+
+model TenantUser {
+  tenantId String
+  userId   String
+  role     String   @default("owner")
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([tenantId, userId])
+}
+
+model Restaurant {
+  id               String             @id @default(uuid())
+  tenantId         String
+  name             String
+  legalName        String?
+  phone            String?
+  addressLine1     String
+  addressLine2     String?
+  postalCode       String
+  city             String
+  countryCode      String             @default("DE")
+  onboardingStatus OnboardingStatus   @default(draft)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  tenant           Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  menus            Menu[]
+  openingHours     OpeningHour[]
+  deliveryZones    DeliveryZone[]
+  phoneNumbers     PhoneNumber[]
+  calls            Call[]
+  orders           Order[]
+  agentConfig      AgentConfig?
+
+  @@index([tenantId])
+}
+
+model Menu {
+  id           String         @id @default(uuid())
+  restaurantId String
+  name         String
+  isActive     Boolean        @default(false)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  restaurant   Restaurant     @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  categories   MenuCategory[]
+
+  @@index([restaurantId])
+}
+
+model MenuCategory {
+  id        String     @id @default(uuid())
+  menuId    String
+  name      String
+  sortOrder Int        @default(0)
+  menu      Menu       @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  items     MenuItem[]
+
+  @@index([menuId])
+}
+
+model MenuItem {
+  id          String           @id @default(uuid())
+  categoryId  String
+  name        String
+  description String?
+  priceCents  Int
+  currency    String           @default("EUR")
+  isAvailable Boolean          @default(true)
+  category    MenuCategory     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  options     MenuItemOption[]
+  orderItems  OrderItem[]
+
+  @@index([categoryId])
+}
+
+model MenuItemOption {
+  id             String   @id @default(uuid())
+  menuItemId     String
+  name           String
+  priceDeltaCents Int     @default(0)
+  isAvailable    Boolean @default(true)
+  menuItem        MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+
+  @@index([menuItemId])
+}
+
+model OpeningHour {
+  id           String     @id @default(uuid())
+  restaurantId String
+  weekday      Int
+  opensAt      String
+  closesAt     String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@index([restaurantId])
+}
+
+model DeliveryZone {
+  id                String     @id @default(uuid())
+  restaurantId      String
+  name              String
+  postalCodePattern String
+  minimumOrderCents Int        @default(0)
+  feeCents          Int        @default(0)
+  restaurant        Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@index([restaurantId])
+}
+
+model PhoneNumber {
+  id           String     @id @default(uuid())
+  restaurantId String
+  e164         String     @unique
+  provider     String
+  sipTrunkId   String?
+  isActive     Boolean    @default(false)
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@index([restaurantId])
+}
+
+model AgentConfig {
+  id                 String     @id @default(uuid())
+  restaurantId       String     @unique
+  greeting           String
+  languageCode       String     @default("de-DE")
+  escalationPhone    String?
+  recordingEnabled   Boolean    @default(false)
+  transcriptRetentionDays Int   @default(30)
+  restaurant         Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+}
+
+model Call {
+  id             String        @id @default(uuid())
+  restaurantId   String
+  livekitRoom    String?
+  callerNumber   String?
+  direction      CallDirection @default(inbound)
+  status         CallStatus    @default(ringing)
+  startedAt      DateTime      @default(now())
+  endedAt        DateTime?
+  transcriptText String?
+  restaurant     Restaurant    @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  orders         Order[]
+
+  @@index([restaurantId])
+}
+
+model Order {
+  id              String               @id @default(uuid())
+  restaurantId    String
+  callId          String?
+  customerName    String?
+  customerPhone   String?
+  fulfillmentType OrderFulfillmentType
+  deliveryAddress String?
+  status          OrderStatus          @default(pending_restaurant)
+  subtotalCents   Int                  @default(0)
+  deliveryFeeCents Int                 @default(0)
+  totalCents      Int                  @default(0)
+  currency        String               @default("EUR")
+  notes           String?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  restaurant      Restaurant           @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  call            Call?                @relation(fields: [callId], references: [id], onDelete: SetNull)
+  items           OrderItem[]
+  events          OrderStatusEvent[]
+
+  @@index([restaurantId])
+  @@index([callId])
+}
+
+model OrderItem {
+  id          String   @id @default(uuid())
+  orderId     String
+  menuItemId  String?
+  name        String
+  quantity    Int
+  unitCents   Int
+  totalCents  Int
+  notes       String?
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem    MenuItem? @relation(fields: [menuItemId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+}
+
+model OrderStatusEvent {
+  id        String      @id @default(uuid())
+  orderId   String
+  status    OrderStatus
+  note      String?
+  createdAt DateTime    @default(now())
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+}
+

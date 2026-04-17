@@ -1,0 +1,77 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: restaurant_ai
+      POSTGRES_USER: restaurant_ai
+      POSTGRES_PASSWORD: restaurant_ai
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U restaurant_ai -d restaurant_ai"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    image: node:22-alpine
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -w @restaurant-ai/api"
+    env_file:
+      - ../.env
+    environment:
+      DATABASE_URL: postgresql://restaurant_ai:restaurant_ai@postgres:5432/restaurant_ai?schema=public
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "4000:4000"
+    volumes:
+      - ..:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    image: node:22-alpine
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -w @restaurant-ai/web"
+    env_file:
+      - ../.env
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:4000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ..:/app
+    depends_on:
+      - api
+
+  agent:
+    image: node:22-alpine
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -w @restaurant-ai/agent"
+    env_file:
+      - ../.env
+    environment:
+      DATABASE_URL: postgresql://restaurant_ai:restaurant_ai@postgres:5432/restaurant_ai?schema=public
+      REDIS_URL: redis://redis:6379
+    volumes:
+      - ..:/app
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:

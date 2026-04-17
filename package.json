@@ -1,0 +1,26 @@
+{
+  "name": "kebab-telefon-assistant-v2",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "db:generate": "npm run db:generate -w @restaurant-ai/db",
+    "db:migrate": "npm run db:migrate -w @restaurant-ai/db",
+    "db:deploy": "npm run db:deploy -w @restaurant-ai/db",
+    "db:seed": "npm run db:seed -w @restaurant-ai/db",
+    "db:studio": "npm run db:studio -w @restaurant-ai/db"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}
