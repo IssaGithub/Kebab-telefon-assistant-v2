@@ -9,3 +9,8 @@ coverage
 *.log
 *.tsbuildinfo
 infra/data
+infra/terraform/.terraform
+infra/terraform/.terraform.lock.hcl
+infra/terraform/*.tfstate
+infra/terraform/*.tfstate.*
+infra/terraform/terraform.tfvars

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+import { apiBaseUrl } from "../lib/api";
+import { useSelectedRestaurant } from "./use-selected-restaurant";
 
 type TestCallState =
   | { status: "idle"; message: string }
@@ -11,6 +11,7 @@ type TestCallState =
   | { status: "error"; message: string };
 
 export function TestCallPanel() {
+  const { restaurantId } = useSelectedRestaurant();
   const [phoneNumber, setPhoneNumber] = useState("");
   const [state, setState] = useState<TestCallState>({
     status: "idle",
@@ -26,11 +27,13 @@ export function TestCallPanel() {
     try {
       const response = await fetch(`${apiBaseUrl}/v1/calls/test`, {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          phoneNumber
+          phoneNumber,
+          restaurantId: restaurantId || undefined
         })
       });
 
@@ -86,15 +89,16 @@ export function TestCallPanel() {
         />
         <button
           className="button"
-          disabled={state.status === "loading" || phoneNumber.trim().length === 0}
+          disabled={state.status === "loading" || phoneNumber.trim().length === 0 || restaurantId.trim().length === 0}
           onClick={startTestCall}
           type="button"
         >
           Testanruf starten
         </button>
       </div>
-      <div className={`action-note ${state.status}`}>{state.message}</div>
+      <div className={`action-note ${state.status}`}>
+        {restaurantId ? state.message : "Waehle zuerst ein Restaurant im geschuetzten Dashboard aus."}
+      </div>
     </div>
   );
 }
-

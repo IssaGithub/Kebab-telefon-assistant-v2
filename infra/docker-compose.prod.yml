@@ -1,0 +1,93 @@
+services:
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      web:
+        condition: service_started
+      api:
+        condition: service_started
+    networks:
+      - edge
+      - app
+
+  web:
+    image: ${WEB_IMAGE:-ghcr.io/example-owner/kebab-telefon-assistant-web:latest}
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      NODE_ENV: production
+      WEB_PORT: 3000
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000 >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app
+
+  api:
+    image: ${API_IMAGE:-ghcr.io/example-owner/kebab-telefon-assistant-api:latest}
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      NODE_ENV: production
+      API_HOST: 0.0.0.0
+      API_PORT: 4000
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+    expose:
+      - "4000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:4000/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app
+
+  agent:
+    image: ${AGENT_IMAGE:-ghcr.io/example-owner/kebab-telefon-assistant-agent:latest}
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+    depends_on:
+      api:
+        condition: service_started
+    networks:
+      - app
+
+  migrate:
+    image: ${API_IMAGE:-ghcr.io/example-owner/kebab-telefon-assistant-api:latest}
+    profiles: ["ops"]
+    env_file:
+      - ../.env
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+    command: ["npm", "run", "db:deploy", "-w", "@restaurant-ai/db"]
+    networks:
+      - app
+
+networks:
+  edge:
+  app:
+
+volumes:
+  caddy_data:
+  caddy_config:

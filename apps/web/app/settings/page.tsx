@@ -1,13 +1,6 @@
 import { AppShell } from "../components/app-shell";
 import { PhoneActivationForm } from "../components/phone-activation-form";
 
-const settings = [
-  { label: "LiveKit Verbindung", value: "Nicht konfiguriert" },
-  { label: "SIP Provider", value: "Nicht konfiguriert" },
-  { label: "Stripe Billing", value: "Nicht konfiguriert" },
-  { label: "Audioaufzeichnung", value: "Aus" }
-];
-
 export default function SettingsPage() {
   return (
     <AppShell activePath="/settings">
@@ -24,7 +17,12 @@ export default function SettingsPage() {
 
         <section className="card">
           <h2>Integrationen</h2>
-          {settings.map((setting) => (
+          {[
+            { label: "LiveKit Verbindung", value: "Ueber /v1/system/capabilities pruefbar" },
+            { label: "SIP Provider", value: "Aktivierbar pro Restaurant" },
+            { label: "Stripe Billing", value: "Noch nicht integriert" },
+            { label: "Audioaufzeichnung", value: "Im AgentConfig-Modell vorgesehen" }
+          ].map((setting) => (
             <div className="status-row" key={setting.label}>
               <strong>{setting.label}</strong>
               <span className="pill warning">{setting.value}</span>

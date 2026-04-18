@@ -46,9 +46,19 @@ export const createOnboardingSchema = z.object({
   tenant: createTenantSchema,
   owner: z.object({
     email: z.string().email(),
-    name: z.string().min(2).optional()
+    name: z.string().min(2).optional(),
+    password: z.string().min(8, "Password must be at least 8 characters long")
   }),
   restaurant: createRestaurantSchema.omit({ tenantId: true })
+});
+
+export const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8)
+});
+
+export const switchTenantSchema = z.object({
+  tenantId: z.string().uuid()
 });
 
 export const createMenuSchema = z.object({
@@ -104,3 +114,5 @@ export type CreateMenuCategoryInput = z.infer<typeof createMenuCategorySchema>;
 export type CreateMenuItemInput = z.infer<typeof createMenuItemSchema>;
 export type CreateTestCallInput = z.infer<typeof createTestCallSchema>;
 export type ActivatePhoneInput = z.infer<typeof activatePhoneSchema>;
+export type LoginInput = z.infer<typeof loginSchema>;
+export type SwitchTenantInput = z.infer<typeof switchTenantSchema>;

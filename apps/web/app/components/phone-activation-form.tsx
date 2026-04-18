@@ -1,15 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
-
-type RestaurantOption = {
-  id: string;
-  name: string;
-  city: string;
-  onboardingStatus: string;
-};
+import { fetchJson, type RestaurantSummary } from "../lib/api";
+import { useSelectedRestaurant } from "./use-selected-restaurant";
 
 type FormState = {
   status: "idle" | "loading" | "success" | "error";
@@ -17,8 +10,8 @@ type FormState = {
 };
 
 export function PhoneActivationForm() {
-  const [restaurantId, setRestaurantId] = useState("");
-  const [restaurants, setRestaurants] = useState<RestaurantOption[]>([]);
+  const { restaurantId, setRestaurantId } = useSelectedRestaurant();
+  const [restaurants, setRestaurants] = useState<RestaurantSummary[]>([]);
   const [phoneNumber, setPhoneNumber] = useState("");
   const [provider, setProvider] = useState("LiveKit SIP");
   const [sipTrunkId, setSipTrunkId] = useState("");
@@ -32,24 +25,12 @@ export function PhoneActivationForm() {
 
     async function loadRestaurants() {
       try {
-        const response = await fetch(`${apiBaseUrl}/v1/restaurants`);
-
-        if (!response.ok) {
-          if (isMounted) {
-            setState({
-              status: "error",
-              message: "Restaurants konnten nicht geladen werden. Bitte API und Datenbank starten."
-            });
-          }
-          return;
-        }
-
-        const payload = (await response.json()) as RestaurantOption[];
+        const payload = await fetchJson<RestaurantSummary[]>("/v1/restaurants");
 
         if (isMounted) {
           setRestaurants(payload);
 
-          if (payload.length > 0) {
+          if (!restaurantId && payload.length > 0) {
             setRestaurantId(payload[0].id);
           }
         }
@@ -68,7 +49,7 @@ export function PhoneActivationForm() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [restaurantId, setRestaurantId]);
 
   async function activatePhone() {
     setState({
@@ -77,11 +58,8 @@ export function PhoneActivationForm() {
     });
 
     try {
-      const response = await fetch(`${apiBaseUrl}/v1/phone-numbers/activate`, {
+      const payload = await fetchJson<{ e164: string; provider: string }>("/v1/phone-numbers/activate", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
         body: JSON.stringify({
           restaurantId,
           phoneNumber,
@@ -91,40 +69,6 @@ export function PhoneActivationForm() {
         })
       });
 
-      const payload = await response.json().catch(() => null);
-
-      if (!response.ok) {
-        if (payload?.error === "validation_error") {
-          setState({
-            status: "error",
-            message: "Bitte pruefe Restaurant, Telefonnummer im Format +49301234567 und SIP-Trunk-ID."
-          });
-          return;
-        }
-
-        if (payload?.error === "restaurant_not_found") {
-          setState({
-            status: "error",
-            message: "Restaurant wurde nicht gefunden. Bitte ein gueltiges Restaurant auswaehlen."
-          });
-          return;
-        }
-
-        if (payload?.error === "database_not_configured") {
-          setState({
-            status: "error",
-            message: "Datenbank ist noch nicht verbunden. Bitte .env anlegen und Postgres starten."
-          });
-          return;
-        }
-
-        setState({
-          status: "error",
-          message: payload?.message ?? "Telefonnummer konnte nicht aktiviert werden."
-        });
-        return;
-      }
-
       setState({
         status: "success",
         message: `${payload.e164} ist aktiv fuer ${payload.provider}.`
@@ -132,7 +76,7 @@ export function PhoneActivationForm() {
     } catch {
       setState({
         status: "error",
-        message: "API nicht erreichbar. Starte die API mit npm run dev -w @restaurant-ai/api."
+        message: "Telefonnummer konnte nicht aktiviert werden. Bitte Format, SIP-Trunk-ID und API pruefen."
       });
     }
   }
@@ -161,7 +105,7 @@ export function PhoneActivationForm() {
             ) : (
               restaurants.map((restaurant) => (
                 <option key={restaurant.id} value={restaurant.id}>
-                  {restaurant.name} · {restaurant.city}
+                  {restaurant.name} - {restaurant.city}
                 </option>
               ))
             )}

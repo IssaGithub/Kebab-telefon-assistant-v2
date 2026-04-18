@@ -52,15 +52,18 @@ model Tenant {
   updatedAt   DateTime     @updatedAt
   users       TenantUser[]
   restaurants Restaurant[]
+  sessions    Session[]
 }
 
 model User {
-  id        String       @id @default(uuid())
-  email     String       @unique
-  name      String?
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
-  tenants   TenantUser[]
+  id           String       @id @default(uuid())
+  email        String       @unique
+  name         String?
+  passwordHash String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  tenants      TenantUser[]
+  sessions     Session[]
 }
 
 model TenantUser {
@@ -71,6 +74,22 @@ model TenantUser {
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([tenantId, userId])
+}
+
+model Session {
+  id         String   @id @default(uuid())
+  userId     String
+  tenantId   String
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tenantId])
+  @@index([expiresAt])
 }
 
 model Restaurant {
@@ -261,4 +280,3 @@ model OrderStatusEvent {
 
   @@index([orderId])
 }
-

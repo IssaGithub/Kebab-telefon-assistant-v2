@@ -1,0 +1,23 @@
+hcloud_token = "replace-me"
+
+project_name = "kebab-telefon-assistant"
+location     = "fsn1"
+
+app_server_type = "ccx23"
+db_server_type  = "ccx13"
+
+ssh_public_keys = [
+  "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA... your-email@example.com"
+]
+
+admin_ingress_ipv4 = [
+  "203.0.113.10/32"
+]
+
+admin_ingress_ipv6 = []
+
+app_private_ip = "10.10.1.10"
+db_private_ip  = "10.10.1.20"
+
+deploy_user       = "root"
+repo_checkout_path = "/opt/kebab-telefon-assistant-v2"

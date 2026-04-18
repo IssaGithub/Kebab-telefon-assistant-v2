@@ -1,13 +1,5 @@
 import { AppShell } from "../components/app-shell";
-
-const restaurants = [
-  {
-    name: "Demo Kebab",
-    city: "Berlin",
-    status: "Onboarding",
-    menus: 0
-  }
-];
+import { RestaurantDataPanel } from "../components/restaurant-data-panel";
 
 export default function RestaurantsPage() {
   return (
@@ -16,24 +8,22 @@ export default function RestaurantsPage() {
         <div>
           <div className="eyebrow">Restaurants</div>
           <h1>Restaurant-Onboarding</h1>
-          <p className="muted">Lege neue Betriebe an und begleite sie bis zum ersten aktiven Telefonassistenten.</p>
+          <p className="muted">
+            Lege neue Betriebe an und begleite sie bis zum ersten aktiven Telefonassistenten.
+          </p>
         </div>
-        <button className="button" type="button">Restaurant anlegen</button>
       </header>
 
-      <section className="card">
-        <h2>Pilotbetriebe</h2>
-        {restaurants.map((restaurant) => (
-          <div className="status-row" key={restaurant.name}>
-            <div>
-              <strong>{restaurant.name}</strong>
-              <div className="muted">{restaurant.city} · {restaurant.menus} Speisekarten</div>
-            </div>
-            <span className="pill warning">{restaurant.status}</span>
-          </div>
-        ))}
-      </section>
+      <div className="stack-lg">
+        <RestaurantDataPanel section="restaurants" />
+        <section className="card">
+          <h2>Tenant-Zugriff</h2>
+          <p className="muted">
+            Neue Accounts und das erste Restaurant werden ueber die oeffentliche Login-Seite angelegt. Weitere
+            restaurantbezogene Daten in diesem Dashboard sind automatisch auf das aktive Tenant beschraenkt.
+          </p>
+        </section>
+      </div>
     </AppShell>
   );
 }
-
