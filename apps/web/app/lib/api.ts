@@ -97,6 +97,12 @@ export type OrderRecord = {
     name: string;
     quantity: number;
   }>;
+  events?: Array<{
+    id: string;
+    status: string;
+    note: string | null;
+    createdAt: string;
+  }>;
 };
 
 export type CallRecord = {
@@ -106,6 +112,35 @@ export type CallRecord = {
   direction: string;
   startedAt: string;
   endedAt: string | null;
+  transcriptText?: string | null;
+};
+
+export type DemoCallSession = {
+  callId: string;
+  orderId: string;
+  assistantMessage: string;
+  messages: Array<{
+    role: "assistant" | "caller";
+    text: string;
+  }>;
+  order: {
+    id: string;
+    status: string;
+    fulfillmentType: string;
+    customerName: string | null;
+    customerPhone: string | null;
+    deliveryAddress: string | null;
+    subtotalCents: number;
+    deliveryFeeCents: number;
+    totalCents: number;
+    currency: string;
+    items: Array<{
+      id: string;
+      name: string;
+      quantity: number;
+      totalCents: number;
+    }>;
+  };
 };
 
 export async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {

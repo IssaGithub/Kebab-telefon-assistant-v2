@@ -46,6 +46,58 @@ docker compose -f infra/docker-compose.yml up --build
 http://localhost:3000
 ```
 
+## Local MVP Flow
+
+1. Install dependencies:
+
+```bash
+npm install
+```
+
+2. Start Postgres and Redis locally.
+If you do not already have them running, the simplest option is to start the local containers used during development.
+
+3. Apply the schema and seed demo data:
+
+```bash
+npm run db:deploy
+npm run db:seed
+```
+
+4. Start the full app:
+
+```bash
+npm run dev
+```
+
+5. Open the dashboard at `http://localhost:3000`
+
+Seeded demo login:
+
+```text
+E-Mail: owner@example.com
+Passwort: supersecret
+```
+
+You can also create a completely new tenant from `/login`.
+Every newly created restaurant now receives a starter menu automatically, so you can test the AI order demo immediately without manual menu setup.
+
+## MVP Test Path
+
+1. Create a new tenant from the login page.
+2. Open the dashboard.
+3. Use `KI-Telefonassistent Demo` on the dashboard.
+4. Start a demo call for the selected restaurant.
+5. Send messages like:
+
+```text
+Ich haette gern 2 Doener Teller, mein Name ist Samet
+Abholung bitte, meine Nummer ist +491701234567 und das war alles
+```
+
+6. Open `Bestellungen` to accept or complete the order.
+7. Open `Anrufe` to inspect the stored transcript.
+
 ## First Milestone
 
 - Multi-tenant restaurant onboarding

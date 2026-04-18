@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "set -a && . ../../.env && set +a && tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
-    "start": "node dist/index.js",
+    "start": "set -a && . ../../.env && set +a && node dist/index.js",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -19,4 +19,3 @@
     "typescript": "^5.6.3"
   }
 }
-

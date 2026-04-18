@@ -10,6 +10,10 @@ export const orderStatusValues = [
 ] as const;
 
 export const orderStatusSchema = z.enum(orderStatusValues);
+export const updateOrderStatusSchema = z.object({
+  status: orderStatusSchema,
+  note: z.string().max(300).optional()
+});
 
 export const onboardingStatusValues = [
   "draft",
@@ -94,6 +98,17 @@ export const createTestCallSchema = z.object({
   waitUntilAnswered: z.boolean().default(false)
 });
 
+export const startDemoCallSchema = z.object({
+  callerNumber: z
+    .string()
+    .regex(/^\+[1-9]\d{6,14}$/, "Phone number must use E.164 format, for example +491701234567")
+    .optional()
+});
+
+export const demoCallMessageSchema = z.object({
+  message: z.string().min(1).max(500)
+});
+
 export const activatePhoneSchema = z.object({
   restaurantId: z.string().uuid(),
   phoneNumber: z
@@ -105,6 +120,7 @@ export const activatePhoneSchema = z.object({
 });
 
 export type OrderStatus = z.infer<typeof orderStatusSchema>;
+export type UpdateOrderStatusInput = z.infer<typeof updateOrderStatusSchema>;
 export type OnboardingStatus = z.infer<typeof onboardingStatusSchema>;
 export type CreateRestaurantInput = z.infer<typeof createRestaurantSchema>;
 export type CreateTenantInput = z.infer<typeof createTenantSchema>;
@@ -113,6 +129,8 @@ export type CreateMenuInput = z.infer<typeof createMenuSchema>;
 export type CreateMenuCategoryInput = z.infer<typeof createMenuCategorySchema>;
 export type CreateMenuItemInput = z.infer<typeof createMenuItemSchema>;
 export type CreateTestCallInput = z.infer<typeof createTestCallSchema>;
+export type StartDemoCallInput = z.infer<typeof startDemoCallSchema>;
+export type DemoCallMessageInput = z.infer<typeof demoCallMessageSchema>;
 export type ActivatePhoneInput = z.infer<typeof activatePhoneSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type SwitchTenantInput = z.infer<typeof switchTenantSchema>;

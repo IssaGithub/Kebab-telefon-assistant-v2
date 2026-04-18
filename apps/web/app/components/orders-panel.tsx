@@ -8,6 +8,7 @@ export function OrdersPanel() {
   const { restaurantId } = useSelectedRestaurant();
   const [orders, setOrders] = useState<OrderRecord[]>([]);
   const [message, setMessage] = useState("Lade Bestellungen...");
+  const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -49,19 +50,91 @@ export function OrdersPanel() {
         <div className="empty-state">{message}</div>
       ) : (
         orders.map((order) => (
-          <div className="order-row" key={order.id}>
-            <div>
-              <strong>{order.customerName ?? order.customerPhone ?? "Unbekannter Kunde"}</strong>
-              <div className="muted">{order.items.map((item) => `${item.quantity}x ${item.name}`).join(", ") || "Ohne Artikel"}</div>
-              <div className="muted">{formatDate(order.createdAt)}</div>
+          <article className="order-card" key={order.id}>
+            <div className="order-row">
+              <div>
+                <strong>{order.customerName ?? order.customerPhone ?? "Unbekannter Kunde"}</strong>
+                <div className="muted">{order.items.map((item) => `${item.quantity}x ${item.name}`).join(", ") || "Ohne Artikel"}</div>
+                <div className="muted">{formatDate(order.createdAt)}</div>
+              </div>
+              <div className="align-end">
+                <span className={order.status === "pending_restaurant" ? "pill warning" : "pill"}>{order.status}</span>
+                <div className="muted">{formatMoney(order.totalCents, order.currency)}</div>
+              </div>
             </div>
-            <div className="align-end">
-              <span className={order.status === "pending_restaurant" ? "pill warning" : "pill"}>{order.status}</span>
-              <div className="muted">{formatMoney(order.totalCents, order.currency)}</div>
+
+            <div className="order-meta">
+              <div className="muted">Telefon: {order.customerPhone ?? "nicht hinterlegt"}</div>
             </div>
-          </div>
+
+            <div className="button-row">
+              {order.status === "pending_restaurant" ? (
+                <>
+                  <button
+                    className="button"
+                    type="button"
+                    disabled={pendingOrderId === order.id}
+                    onClick={() => updateStatus(order.id, "accepted")}
+                  >
+                    Annehmen
+                  </button>
+                  <button
+                    className="button button-secondary"
+                    type="button"
+                    disabled={pendingOrderId === order.id}
+                    onClick={() => updateStatus(order.id, "rejected")}
+                  >
+                    Ablehnen
+                  </button>
+                </>
+              ) : null}
+
+              {order.status === "accepted" ? (
+                <button
+                  className="button"
+                  type="button"
+                  disabled={pendingOrderId === order.id}
+                  onClick={() => updateStatus(order.id, "completed")}
+                >
+                  Als erledigt markieren
+                </button>
+              ) : null}
+            </div>
+
+            {order.events?.length ? (
+              <div className="order-events">
+                {order.events.slice(0, 3).map((event) => (
+                  <div className="muted" key={event.id}>
+                    {event.status} · {formatDate(event.createdAt)}
+                    {event.note ? ` · ${event.note}` : ""}
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </article>
         ))
       )}
     </section>
   );
+
+  async function updateStatus(orderId: string, status: "accepted" | "rejected" | "completed") {
+    setPendingOrderId(orderId);
+
+    try {
+      await fetchJson(`/v1/orders/${orderId}/status`, {
+        method: "POST",
+        body: JSON.stringify({
+          status
+        })
+      });
+
+      const refreshedOrders = await fetchJson<OrderRecord[]>(`/v1/restaurants/${restaurantId}/orders`);
+      setOrders(refreshedOrders);
+      setMessage("");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Bestellstatus konnte nicht aktualisiert werden.");
+    } finally {
+      setPendingOrderId(null);
+    }
+  }
 }

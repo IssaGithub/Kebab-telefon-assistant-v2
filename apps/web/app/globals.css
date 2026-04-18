@@ -447,6 +447,78 @@ h1 {
   justify-items: end;
 }
 
+.demo-panel-header {
+  margin-bottom: 0;
+}
+
+.demo-panel-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(280px, 0.8fr) minmax(0, 1.2fr);
+}
+
+.demo-hints {
+  display: grid;
+  gap: 6px;
+}
+
+.demo-chat {
+  display: grid;
+  gap: 10px;
+  max-height: 420px;
+  overflow: auto;
+}
+
+.demo-message {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  display: grid;
+  gap: 6px;
+  max-width: 85%;
+  padding: 12px 14px;
+}
+
+.demo-message.assistant {
+  background: #eff7f0;
+}
+
+.demo-message.caller {
+  background: #ffffff;
+  justify-self: end;
+}
+
+.demo-order-items {
+  display: grid;
+}
+
+.order-card {
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 12px;
+  padding: 14px 0;
+}
+
+.order-card:last-child {
+  border-bottom: 0;
+}
+
+.order-meta,
+.order-events {
+  display: grid;
+  gap: 6px;
+}
+
+.call-transcript {
+  background: #fbfcf8;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+  padding: 12px 14px;
+  white-space: pre-wrap;
+ }
+
 @media (max-width: 900px) {
   .shell {
     grid-template-columns: 1fr;
@@ -505,7 +577,8 @@ h1 {
   .metrics-compact,
   .content-grid,
   .compact-grid,
-  .auth-grid {
+  .auth-grid,
+  .demo-panel-grid {
     grid-template-columns: 1fr;
   }
 

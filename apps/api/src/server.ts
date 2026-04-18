@@ -1,8 +1,10 @@
+import "./load-env.js";
 import cors from "@fastify/cors";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@restaurant-ai/db";
 import {
   activatePhoneSchema,
+  demoCallMessageSchema,
   createMenuCategorySchema,
   createMenuItemSchema,
   createMenuSchema,
@@ -10,7 +12,9 @@ import {
   createRestaurantSchema,
   createTestCallSchema,
   loginSchema,
-  orderStatusValues
+  orderStatusValues,
+  updateOrderStatusSchema,
+  startDemoCallSchema
 } from "@restaurant-ai/shared";
 import Fastify from "fastify";
 import { z } from "zod";
@@ -22,7 +26,9 @@ import {
   requireSession,
   verifyPassword
 } from "./services/auth.js";
+import { continueDemoOrderCall, startDemoOrderCall } from "./services/demo-order-call.js";
 import { createTestCall, missingLiveKitConfig } from "./services/livekit-test-call.js";
+import { createStarterMenu } from "./services/starter-menu.js";
 
 const port = Number(process.env.API_PORT ?? 4000);
 const host = process.env.API_HOST ?? "0.0.0.0";
@@ -100,6 +106,28 @@ async function findTenantCategory(tenantId: string, categoryId: string) {
         restaurant: {
           tenantId
         }
+      }
+    }
+  });
+}
+
+async function findTenantCall(tenantId: string, callId: string) {
+  return prisma.call.findFirst({
+    where: {
+      id: callId,
+      restaurant: {
+        tenantId
+      }
+    }
+  });
+}
+
+async function findTenantOrder(tenantId: string, orderId: string) {
+  return prisma.order.findFirst({
+    where: {
+      id: orderId,
+      restaurant: {
+        tenantId
       }
     }
   });
@@ -391,6 +419,50 @@ app.post("/v1/calls/test", async (request, reply) => {
   }
 });
 
+app.post("/v1/restaurants/:restaurantId/demo-call", async (request, reply) => {
+  const session = await requireSession(request, reply);
+
+  if (!session) {
+    return;
+  }
+
+  const params = uuidParam.parse(request.params);
+  const input = startDemoCallSchema.parse(request.body ?? {});
+  const restaurant = await findTenantRestaurant(session.tenantId, params.restaurantId);
+
+  if (!restaurant) {
+    return reply.status(404).send({
+      error: "restaurant_not_found",
+      message: "Restaurant wurde nicht gefunden."
+    });
+  }
+
+  const result = await startDemoOrderCall(params.restaurantId, input.callerNumber);
+  return reply.status(201).send(result);
+});
+
+app.post("/v1/demo-calls/:callId/messages", async (request, reply) => {
+  const session = await requireSession(request, reply);
+
+  if (!session) {
+    return;
+  }
+
+  const params = z.object({ callId: z.string().uuid() }).parse(request.params);
+  const input = demoCallMessageSchema.parse(request.body);
+  const call = await findTenantCall(session.tenantId, params.callId);
+
+  if (!call) {
+    return reply.status(404).send({
+      error: "demo_call_not_found",
+      message: "Demo-Anruf wurde nicht gefunden."
+    });
+  }
+
+  const result = await continueDemoOrderCall(params.callId, input.message);
+  return reply.send(result);
+});
+
 app.post("/v1/phone-numbers/activate", async (request, reply) => {
   const session = await requireSession(request, reply);
 
@@ -522,6 +594,8 @@ app.post("/v1/onboarding", async (request, reply) => {
         }
       });
 
+      await createStarterMenu(tx, restaurant.id);
+
       return { tenant, user, restaurant };
     });
 
@@ -599,6 +673,10 @@ app.post("/v1/restaurants", async (request, reply) => {
     include: {
       agentConfig: true
     }
+  });
+
+  await prisma.$transaction(async (tx) => {
+    await createStarterMenu(tx, restaurant.id);
   });
 
   return reply.status(201).send(restaurant);
@@ -684,6 +762,52 @@ app.get("/v1/restaurants/:restaurantId/orders", async (request, reply) => {
       }
     }
   });
+});
+
+app.post("/v1/orders/:orderId/status", async (request, reply) => {
+  const session = await requireSession(request, reply);
+
+  if (!session) {
+    return;
+  }
+
+  const params = z.object({ orderId: z.string().uuid() }).parse(request.params);
+  const input = updateOrderStatusSchema.parse(request.body);
+  const order = await findTenantOrder(session.tenantId, params.orderId);
+
+  if (!order) {
+    return reply.status(404).send({
+      error: "order_not_found",
+      message: "Bestellung wurde nicht gefunden."
+    });
+  }
+
+  const updatedOrder = await prisma.$transaction(async (tx) => {
+    const nextOrder = await tx.order.update({
+      where: { id: params.orderId },
+      data: {
+        status: input.status
+      },
+      include: {
+        items: true,
+        events: {
+          orderBy: { createdAt: "desc" }
+        }
+      }
+    });
+
+    await tx.orderStatusEvent.create({
+      data: {
+        orderId: params.orderId,
+        status: input.status,
+        note: input.note
+      }
+    });
+
+    return nextOrder;
+  });
+
+  return reply.send(updatedOrder);
 });
 
 app.get("/v1/restaurants/:restaurantId/calls", async (request, reply) => {

@@ -49,16 +49,24 @@ export function CallsPanel() {
         <div className="empty-state">{message}</div>
       ) : (
         calls.map((call) => (
-          <div className="order-row" key={call.id}>
-            <div>
-              <strong>{call.callerNumber ?? "Unbekannt"}</strong>
-              <div className="muted">
-                {call.direction} - {call.status}
+          <article className="order-card" key={call.id}>
+            <div className="order-row">
+              <div>
+                <strong>{call.callerNumber ?? "Unbekannt"}</strong>
+                <div className="muted">
+                  {call.direction} - {call.status}
+                </div>
+                <div className="muted">{formatDate(call.startedAt)}</div>
               </div>
-              <div className="muted">{formatDate(call.startedAt)}</div>
+              <span className="pill">{call.status}</span>
             </div>
-            <span className="pill">{call.status}</span>
-          </div>
+
+            {call.transcriptText ? (
+              <div className="call-transcript">{call.transcriptText}</div>
+            ) : (
+              <div className="muted">Noch kein Transkript gespeichert.</div>
+            )}
+          </article>
         ))
       )}
     </section>

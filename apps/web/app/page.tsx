@@ -1,4 +1,5 @@
 import { AppShell } from "./components/app-shell";
+import { DemoCallPanel } from "./components/demo-call-panel";
 import { RestaurantDataPanel } from "./components/restaurant-data-panel";
 import { TestCallPanel } from "./components/test-call-panel";
 
@@ -19,6 +20,7 @@ export default function DashboardPage() {
 
       <div className="stack-lg">
         <RestaurantDataPanel section="dashboard" />
+        <DemoCallPanel />
       </div>
     </AppShell>
   );

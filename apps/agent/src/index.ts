@@ -1,3 +1,5 @@
+import "./load-env.js";
+
 const requiredEnvironment = ["LIVEKIT_URL", "LIVEKIT_API_KEY", "LIVEKIT_API_SECRET"] as const;
 
 function missingEnvironment() {
@@ -18,4 +20,3 @@ async function main() {
 }
 
 await main();
-

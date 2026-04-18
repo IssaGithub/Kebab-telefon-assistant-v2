@@ -7,15 +7,15 @@
     "apps/*"
   ],
   "scripts": {
-    "dev": "npm run dev --workspaces --if-present",
+    "dev": "set -a && . ./.env && set +a && (npm run dev -w @restaurant-ai/api & npm run dev -w @restaurant-ai/web & npm run dev -w @restaurant-ai/agent & wait)",
     "build": "npm run build --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "db:generate": "npm run db:generate -w @restaurant-ai/db",
-    "db:migrate": "npm run db:migrate -w @restaurant-ai/db",
-    "db:deploy": "npm run db:deploy -w @restaurant-ai/db",
-    "db:seed": "npm run db:seed -w @restaurant-ai/db",
-    "db:studio": "npm run db:studio -w @restaurant-ai/db"
+    "db:generate": "set -a && . ./.env && set +a && npm run db:generate -w @restaurant-ai/db",
+    "db:migrate": "set -a && . ./.env && set +a && npm run db:migrate -w @restaurant-ai/db",
+    "db:deploy": "set -a && . ./.env && set +a && npm run db:deploy -w @restaurant-ai/db",
+    "db:seed": "set -a && . ./.env && set +a && npm run db:seed -w @restaurant-ai/db",
+    "db:studio": "set -a && . ./.env && set +a && npm run db:studio -w @restaurant-ai/db"
   },
   "engines": {
     "node": ">=20"
