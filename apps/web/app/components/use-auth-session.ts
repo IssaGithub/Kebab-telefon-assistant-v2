@@ -8,6 +8,7 @@ export type AuthSession = {
     id: string;
     email: string;
     name: string | null;
+    emailVerifiedAt: string | null;
   };
   tenant: {
     id: string;

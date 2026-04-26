@@ -126,6 +126,22 @@ docker compose --profile ops -f infra/docker-compose.prod.yml run --rm migrate
 docker compose -f infra/docker-compose.prod.yml up -d
 ```
 
+If you want GitHub Actions to deploy automatically after a successful `main` build, add these repository secrets first:
+
+- `GHCR_TOKEN`
+- `GHCR_USERNAME`
+- `HETZNER_APP_HOST`
+- `HETZNER_APP_PATH`
+- `HETZNER_APP_SSH_KEY`
+- `HETZNER_APP_SSH_KNOWN_HOSTS`
+- `HETZNER_APP_USER`
+
+`HETZNER_APP_SSH_KNOWN_HOSTS` should contain the output of:
+
+```bash
+ssh-keyscan -H <app-01-ip-or-hostname>
+```
+
 Verify:
 
 ```bash
@@ -166,3 +182,9 @@ docker compose -f infra/docker-compose.prod.yml up -d
 If the schema changes, do not skip the migration step.
 
 If you adopt GHCR image publishing through [.github/workflows/deploy-images.yml](/Users/issa/Documents/repos/Kebab-telefon-assistant-v2/.github/workflows/deploy-images.yml:1), you can switch the app server from local `docker compose build` to `docker compose pull` plus `docker compose up -d`.
+
+The repository now separates the delivery flow into three GitHub Actions:
+
+- `CI`: install, Prisma generate, typecheck, build
+- `Build Images`: publish GHCR images only after successful `CI`
+- `Deploy Hetzner`: SSH deploy after successful image publish, or manual dispatch

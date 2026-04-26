@@ -7,10 +7,13 @@
     "build": "set -a && . ../../.env && set +a && NEXT_DIST_DIR=.next-build next build",
     "start": "set -a && . ../../.env && set +a && NEXT_DIST_DIR=.next-build next start --hostname 0.0.0.0 --port ${WEB_PORT:-3000}",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit --incremental false"
   },
   "dependencies": {
+    "@livekit/protocol": "^1.45.3",
     "@restaurant-ai/shared": "*",
+    "livekit-client": "^2.18.3",
+    "livekit-server-sdk": "^2.15.1",
     "next": "^15.0.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

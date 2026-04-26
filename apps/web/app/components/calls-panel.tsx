@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { fetchJson, formatDate, type CallRecord } from "../lib/api";
 import { useSelectedRestaurant } from "./use-selected-restaurant";
 
+const REFRESH_INTERVAL_MS = 5000;
+
 export function CallsPanel() {
   const { restaurantId } = useSelectedRestaurant();
   const [calls, setCalls] = useState<CallRecord[]>([]);
@@ -36,9 +38,13 @@ export function CallsPanel() {
     }
 
     void load();
+    const interval = window.setInterval(() => {
+      void load();
+    }, REFRESH_INTERVAL_MS);
 
     return () => {
       active = false;
+      window.clearInterval(interval);
     };
   }, [restaurantId]);
 

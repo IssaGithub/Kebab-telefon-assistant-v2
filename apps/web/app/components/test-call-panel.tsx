@@ -13,9 +13,10 @@ type TestCallState =
 export function TestCallPanel() {
   const { restaurantId } = useSelectedRestaurant();
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [waitUntilAnswered, setWaitUntilAnswered] = useState(true);
   const [state, setState] = useState<TestCallState>({
     status: "idle",
-    message: "Gib eine Zielnummer im Format +491701234567 ein."
+    message: "Gib die Telefonnummer deines Kunden oder deines eigenen Handys im Format +491701234567 ein."
   });
 
   async function startTestCall() {
@@ -33,7 +34,8 @@ export function TestCallPanel() {
         },
         body: JSON.stringify({
           phoneNumber,
-          restaurantId: restaurantId || undefined
+          restaurantId: restaurantId || undefined,
+          waitUntilAnswered
         })
       });
 
@@ -65,7 +67,7 @@ export function TestCallPanel() {
 
       setState({
         status: "success",
-        message: `Testanruf gestartet. LiveKit Room: ${payload.roomName}`
+        message: `Demo-Call gestartet. LiveKit Room: ${payload.roomName}. Sage im Gespraech zum Beispiel: "Ich haette gern zwei Doener und eine Cola."`
       });
     } catch {
       setState({
@@ -77,7 +79,8 @@ export function TestCallPanel() {
 
   return (
     <div className="test-call-panel">
-      <label className="field-label" htmlFor="test-call-phone">Testnummer</label>
+      <div className="demo-call-kicker">LiveKit Demo</div>
+      <label className="field-label" htmlFor="test-call-phone">Zielnummer fuer Vorfuehrung</label>
       <div className="inline-form">
         <input
           id="test-call-phone"
@@ -93,11 +96,25 @@ export function TestCallPanel() {
           onClick={startTestCall}
           type="button"
         >
-          Testanruf starten
+          Demo-Call starten
         </button>
       </div>
+      <label className="demo-call-option">
+        <input
+          checked={waitUntilAnswered}
+          onChange={(event) => setWaitUntilAnswered(event.target.checked)}
+          type="checkbox"
+        />
+        <span>Auf Annahme warten, damit Fehler direkt sichtbar werden</span>
+      </label>
       <div className={`action-note ${state.status}`}>
         {restaurantId ? state.message : "Waehle zuerst ein Restaurant im geschuetzten Dashboard aus."}
+      </div>
+      <div className="demo-call-script">
+        <strong>Vorfuehrungsideen</strong>
+        <div>Ich haette gern zwei Doener Teller und eine Cola.</div>
+        <div>Lieferung bitte, mein Name ist Samet.</div>
+        <div>Meine Adresse ist Hauptstrasse 1 in Berlin.</div>
       </div>
     </div>
   );

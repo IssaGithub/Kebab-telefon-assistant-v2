@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 const storageKey = "restaurant-ai:selected-restaurant-id";
 
@@ -34,11 +34,11 @@ export function useSelectedRestaurant() {
     };
   }, []);
 
-  function setRestaurantId(nextRestaurantId: string) {
+  const setRestaurantId = useCallback((nextRestaurantId: string) => {
     window.localStorage.setItem(storageKey, nextRestaurantId);
     setRestaurantIdState(nextRestaurantId);
     window.dispatchEvent(new CustomEvent("restaurant-selection-change", { detail: nextRestaurantId }));
-  }
+  }, []);
 
   return {
     restaurantId,

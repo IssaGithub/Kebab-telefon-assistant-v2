@@ -9,6 +9,7 @@ const navItems = [
   { href: "/menus", label: "Speisekarten" },
   { href: "/orders", label: "Bestellungen" },
   { href: "/calls", label: "Anrufe" },
+  { href: "/usage", label: "Usage" },
   { href: "/settings", label: "Einstellungen" }
 ];
 

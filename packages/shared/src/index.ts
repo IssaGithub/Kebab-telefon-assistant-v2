@@ -56,6 +56,8 @@ export const createOnboardingSchema = z.object({
   restaurant: createRestaurantSchema.omit({ tenantId: true })
 });
 
+export const registerSchema = createOnboardingSchema;
+
 export const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8)
@@ -63,6 +65,23 @@ export const loginSchema = z.object({
 
 export const switchTenantSchema = z.object({
   tenantId: z.string().uuid()
+});
+
+export const requestPasswordResetSchema = z.object({
+  email: z.string().email()
+});
+
+export const completePasswordResetSchema = z.object({
+  token: z.string().min(20),
+  password: z.string().min(8, "Password must be at least 8 characters long")
+});
+
+export const requestEmailVerificationSchema = z.object({
+  email: z.string().email()
+});
+
+export const completeEmailVerificationSchema = z.object({
+  token: z.string().min(20)
 });
 
 export const createMenuSchema = z.object({
@@ -109,6 +128,14 @@ export const demoCallMessageSchema = z.object({
   message: z.string().min(1).max(500)
 });
 
+export const simulateInboundCallSchema = z.object({
+  callerNumber: z
+    .string()
+    .regex(/^\+[1-9]\d{6,14}$/, "Phone number must use E.164 format, for example +491701234567")
+    .optional(),
+  completeCall: z.boolean().default(true)
+});
+
 export const activatePhoneSchema = z.object({
   restaurantId: z.string().uuid(),
   phoneNumber: z
@@ -125,12 +152,18 @@ export type OnboardingStatus = z.infer<typeof onboardingStatusSchema>;
 export type CreateRestaurantInput = z.infer<typeof createRestaurantSchema>;
 export type CreateTenantInput = z.infer<typeof createTenantSchema>;
 export type CreateOnboardingInput = z.infer<typeof createOnboardingSchema>;
+export type RegisterInput = z.infer<typeof registerSchema>;
 export type CreateMenuInput = z.infer<typeof createMenuSchema>;
 export type CreateMenuCategoryInput = z.infer<typeof createMenuCategorySchema>;
 export type CreateMenuItemInput = z.infer<typeof createMenuItemSchema>;
 export type CreateTestCallInput = z.infer<typeof createTestCallSchema>;
 export type StartDemoCallInput = z.infer<typeof startDemoCallSchema>;
 export type DemoCallMessageInput = z.infer<typeof demoCallMessageSchema>;
+export type SimulateInboundCallInput = z.infer<typeof simulateInboundCallSchema>;
 export type ActivatePhoneInput = z.infer<typeof activatePhoneSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type SwitchTenantInput = z.infer<typeof switchTenantSchema>;
+export type RequestPasswordResetInput = z.infer<typeof requestPasswordResetSchema>;
+export type CompletePasswordResetInput = z.infer<typeof completePasswordResetSchema>;
+export type RequestEmailVerificationInput = z.infer<typeof requestEmailVerificationSchema>;
+export type CompleteEmailVerificationInput = z.infer<typeof completeEmailVerificationSchema>;

@@ -9,6 +9,14 @@ type WizardState = {
   message: string;
 };
 
+type RegistrationResponse = {
+  status?: string;
+  tenant: { id: string; slug: string };
+  restaurant: { id: string; name: string };
+  verificationToken?: string | null;
+  verificationUrl?: string | null;
+};
+
 type Props = {
   compact?: boolean;
   publicMode?: boolean;
@@ -100,10 +108,7 @@ export function RestaurantOnboardingWizard({ compact = false, publicMode = false
     });
 
     try {
-      const payload = await fetchJson<{
-        tenant: { id: string; slug: string };
-        restaurant: { id: string; name: string };
-      }>("/v1/onboarding", {
+      const payload = await fetchJson<RegistrationResponse>(publicMode ? "/v1/auth/register" : "/v1/onboarding", {
         method: "POST",
         body: JSON.stringify({
           tenant: {
@@ -128,15 +133,24 @@ export function RestaurantOnboardingWizard({ compact = false, publicMode = false
 
       setRestaurantId(payload.restaurant.id);
       setForm(initialForm);
+
+      if (publicMode) {
+        const localPreview =
+          payload.verificationToken && payload.verificationUrl
+            ? ` Lokaler Verifizierungs-Link: ${payload.verificationUrl}`
+            : "";
+
+        setState({
+          status: "success",
+          message: `${payload.restaurant.name} wurde angelegt. Bitte bestaetige jetzt die E-Mail Adresse und melde dich danach an.${localPreview}`
+        });
+        return;
+      }
+
       setState({
         status: "success",
         message: `${payload.restaurant.name} wurde angelegt. Als Naechstes Speisekarte und Telefonnummer vervollstaendigen.`
       });
-
-      if (publicMode) {
-        window.location.href = "/";
-        return;
-      }
 
       const refreshedRestaurants = await fetchJson<RestaurantSummary[]>("/v1/restaurants");
       setRestaurants(refreshedRestaurants);
@@ -184,11 +198,18 @@ export function RestaurantOnboardingWizard({ compact = false, publicMode = false
     <section className="card stack-lg">
       <div className="page-header" style={{ marginBottom: compact ? 0 : 20 }}>
         <div>
-          <div className="eyebrow">Self-Service Setup</div>
-          <h2>{compact ? "Neuen Tenant anlegen" : publicMode ? "Account erstellen und Restaurant einrichten" : "Produkt bestellen und sofort konfigurieren"}</h2>
+          <div className="eyebrow">{publicMode ? "Client Registration" : "Self-Service Setup"}</div>
+          <h2>
+            {compact
+              ? "Neuen Tenant anlegen"
+              : publicMode
+                ? "Client registrieren und Restaurant einrichten"
+                : "Produkt bestellen und sofort konfigurieren"}
+          </h2>
           <p className="muted">
-            Dieser Flow legt Tenant, Restaurant und Inhaber an. Danach koennen Menue, Telefonnummer und Testanruf
-            direkt im Dashboard ergaenzt werden.
+            {publicMode
+              ? "Die Registrierung legt Tenant, Restaurant und den ersten Inhaber-Account an. Danach bestaetigst du die E-Mail Adresse und meldest dich an."
+              : "Dieser Flow legt Tenant, Restaurant und Inhaber an. Danach koennen Menue, Telefonnummer und Testanruf direkt im Dashboard ergaenzt werden."}
           </p>
         </div>
         {!publicMode && summary ? (
@@ -306,7 +327,7 @@ export function RestaurantOnboardingWizard({ compact = false, publicMode = false
 
           {publicMode ? (
             <p className="muted">
-              Nach dem Absenden wird automatisch eine Sitzung erstellt und du landest direkt im geschuetzten Dashboard.
+              Nach dem Absenden wird eine Verifizierungs-E-Mail verschickt. Erst danach ist der erste Login moeglich.
             </p>
           ) : (
             <>

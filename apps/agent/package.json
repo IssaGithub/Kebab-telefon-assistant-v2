@@ -4,13 +4,17 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "set -a && . ../../.env && set +a && tsx watch src/index.ts",
+    "dev": "set -a && . ../../.env && set +a && tsx watch src/index.ts dev",
     "build": "tsc -p tsconfig.json",
-    "start": "set -a && . ../../.env && set +a && node dist/index.js",
+    "start": "set -a && . ../../.env && set +a && node dist/index.js start",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@livekit/agents": "^1.2.6",
+    "@livekit/agents-plugin-silero": "^1.2.6",
+    "@restaurant-ai/db": "*",
     "@restaurant-ai/shared": "*",
+    "dotenv": "^16.5.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {

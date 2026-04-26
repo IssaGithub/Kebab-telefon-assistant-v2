@@ -1,4 +1,12 @@
-export const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+function resolveApiBaseUrl() {
+  if (typeof window !== "undefined") {
+    return "";
+  }
+
+  return process.env.INTERNAL_API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:4000";
+}
+
+export const apiBaseUrl = resolveApiBaseUrl();
 
 export type RestaurantSummary = {
   id: string;
@@ -29,6 +37,7 @@ export type RestaurantDetail = RestaurantSummary & {
     e164: string;
     provider: string;
     sipTrunkId: string | null;
+    livekitDispatchRuleId: string | null;
     isActive: boolean;
   }>;
   menus: Array<{
@@ -86,12 +95,24 @@ export type DashboardSummary = {
 
 export type OrderRecord = {
   id: string;
+  callId?: string | null;
   customerName: string | null;
   customerPhone: string | null;
+  fulfillmentType?: string;
+  deliveryAddress?: string | null;
+  notes?: string | null;
   status: string;
   totalCents: number;
   currency: string;
   createdAt: string;
+  call?: {
+    id: string;
+    status: string;
+    callerNumber: string | null;
+    livekitRoom: string | null;
+    startedAt: string;
+    endedAt: string | null;
+  } | null;
   items: Array<{
     id: string;
     name: string;
@@ -108,6 +129,7 @@ export type OrderRecord = {
 export type CallRecord = {
   id: string;
   callerNumber: string | null;
+  livekitRoom?: string | null;
   status: string;
   direction: string;
   startedAt: string;
@@ -140,6 +162,51 @@ export type DemoCallSession = {
       quantity: number;
       totalCents: number;
     }>;
+  };
+};
+
+export type UsageSummary = {
+  scope: {
+    tenantId: string;
+    tenantName: string | null;
+  };
+  tracked: {
+    exactProviderUsage: boolean;
+    notes: string[];
+  };
+  totals: {
+    restaurants: number;
+    orders: number;
+    calls: number;
+    livekitRooms: number;
+    callMinutes: number;
+    transcriptChars: number;
+  };
+  tokens: {
+    estimatedInputTokens: number;
+    estimatedOutputTokens: number;
+    estimatedTotalTokens: number;
+    budgetTotal: number | null;
+    budgetInput: number | null;
+    budgetOutput: number | null;
+    remainingTotal: number | null;
+    remainingInput: number | null;
+    remainingOutput: number | null;
+  };
+  costs: {
+    livekitCents: number | null;
+    sttCents: number | null;
+    ttsCents: number | null;
+    llmInputCents: number | null;
+    llmOutputCents: number | null;
+    totalKnownCents: number | null;
+  };
+  pricingConfig: {
+    livekitCostPerMinute: number | null;
+    sttCostPerMinute: number | null;
+    ttsCostPer1kChars: number | null;
+    llmInputCostPer1mTokens: number | null;
+    llmOutputCostPer1mTokens: number | null;
   };
 };
 

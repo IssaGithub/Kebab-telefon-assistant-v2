@@ -1,4 +1,4 @@
-# Kebab Telefon Assistant V2
+≈ç# Kebab Telefon Assistant V2
 
 SaaS platform for AI-powered restaurant phone ordering. Restaurants can onboard, manage menus, connect a phone number, and receive structured orders captured by an AI voice assistant.
 
@@ -97,6 +97,32 @@ Abholung bitte, meine Nummer ist +491701234567 und das war alles
 
 6. Open `Bestellungen` to accept or complete the order.
 7. Open `Anrufe` to inspect the stored transcript.
+
+## LiveKit Inbound Calls
+
+The repository now includes a real inbound webhook entrypoint:
+
+```text
+POST /v1/livekit/webhook
+```
+
+When a restaurant phone number is activated with provider `LiveKit SIP`, the API attempts to create a LiveKit SIP dispatch rule for that number and stores the returned dispatch rule ID on the phone record.
+
+Inbound webhook events currently do this:
+
+- resolve the restaurant from inherited LiveKit participant attributes or the room prefix
+- create a real inbound `Call`
+- create a linked draft `Order` if none exists yet
+- mark the call completed when the SIP participant leaves
+
+For local testing, the webhook endpoint accepts `application/webhook+json`.
+In non-production environments only, you can bypass webhook auth with:
+
+```text
+x-livekit-skip-auth: 1
+```
+
+That is only intended for local development to simulate inbound SIP events.
 
 ## First Milestone
 

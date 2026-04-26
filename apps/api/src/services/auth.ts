@@ -4,6 +4,8 @@ import crypto from "node:crypto";
 
 const sessionCookieName = "kebab_ai_session";
 const sessionTtlDays = 30;
+const passwordResetTtlMinutes = 30;
+const emailVerificationTtlHours = 24;
 
 type SessionContext = {
   sessionId: string;
@@ -12,6 +14,7 @@ type SessionContext = {
     id: string;
     email: string;
     name: string | null;
+    emailVerifiedAt: Date | null;
   };
   tenants: Array<{
     tenantId: string;
@@ -67,6 +70,205 @@ export async function createSession(reply: FastifyReply, userId: string, tenantI
   });
 
   setSessionCookie(reply, rawToken, expiresAt);
+}
+
+export async function createPasswordResetToken(email: string) {
+  const user = await prisma.user.findUnique({
+    where: { email },
+    select: {
+      id: true
+    }
+  });
+
+  if (!user) {
+    return null;
+  }
+
+  const rawToken = crypto.randomBytes(32).toString("hex");
+  const tokenHash = sha256(rawToken);
+  const expiresAt = new Date(Date.now() + passwordResetTtlMinutes * 60 * 1000);
+
+  await prisma.passwordResetToken.create({
+    data: {
+      userId: user.id,
+      tokenHash,
+      expiresAt
+    }
+  });
+
+  return {
+    token: rawToken,
+    expiresAt
+  };
+}
+
+export async function createEmailVerificationToken(email: string) {
+  const user = await prisma.user.findUnique({
+    where: { email },
+    select: {
+      id: true,
+      emailVerifiedAt: true
+    }
+  });
+
+  if (!user || user.emailVerifiedAt) {
+    return null;
+  }
+
+  const rawToken = crypto.randomBytes(32).toString("hex");
+  const tokenHash = sha256(rawToken);
+  const expiresAt = new Date(Date.now() + emailVerificationTtlHours * 60 * 60 * 1000);
+
+  await prisma.emailVerificationToken.create({
+    data: {
+      userId: user.id,
+      tokenHash,
+      expiresAt
+    }
+  });
+
+  return {
+    token: rawToken,
+    expiresAt
+  };
+}
+
+export async function consumePasswordResetToken(token: string, nextPassword: string) {
+  const passwordResetToken = await prisma.passwordResetToken.findUnique({
+    where: {
+      tokenHash: sha256(token)
+    },
+    include: {
+      user: {
+        include: {
+          tenants: {
+            include: {
+              tenant: true
+            }
+          }
+        }
+      }
+    }
+  });
+
+  if (!passwordResetToken || passwordResetToken.usedAt || passwordResetToken.expiresAt <= new Date()) {
+    return null;
+  }
+
+  const passwordHash = await hashPassword(nextPassword);
+
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({
+      where: {
+        id: passwordResetToken.userId
+      },
+      data: {
+        passwordHash
+      }
+    });
+
+    await tx.passwordResetToken.update({
+      where: {
+        id: passwordResetToken.id
+      },
+      data: {
+        usedAt: new Date()
+      }
+    });
+
+    await tx.passwordResetToken.deleteMany({
+      where: {
+        userId: passwordResetToken.userId,
+        id: {
+          not: passwordResetToken.id
+        }
+      }
+    });
+
+    await tx.session.deleteMany({
+      where: {
+        userId: passwordResetToken.userId
+      }
+    });
+  });
+
+  const primaryTenant = passwordResetToken.user.tenants[0]?.tenant ?? null;
+
+  return {
+    user: {
+      id: passwordResetToken.user.id,
+      email: passwordResetToken.user.email,
+      name: passwordResetToken.user.name,
+      emailVerifiedAt: passwordResetToken.user.emailVerifiedAt
+    },
+    tenant: primaryTenant
+  };
+}
+
+export async function consumeEmailVerificationToken(token: string) {
+  const emailVerificationToken = await prisma.emailVerificationToken.findUnique({
+    where: {
+      tokenHash: sha256(token)
+    },
+    include: {
+      user: {
+        include: {
+          tenants: {
+            include: {
+              tenant: true
+            }
+          }
+        }
+      }
+    }
+  });
+
+  if (!emailVerificationToken || emailVerificationToken.usedAt || emailVerificationToken.expiresAt <= new Date()) {
+    return null;
+  }
+
+  const verifiedAt = new Date();
+
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({
+      where: {
+        id: emailVerificationToken.userId
+      },
+      data: {
+        emailVerifiedAt: verifiedAt
+      }
+    });
+
+    await tx.emailVerificationToken.update({
+      where: {
+        id: emailVerificationToken.id
+      },
+      data: {
+        usedAt: verifiedAt
+      }
+    });
+
+    await tx.emailVerificationToken.deleteMany({
+      where: {
+        userId: emailVerificationToken.userId,
+        id: {
+          not: emailVerificationToken.id
+        }
+      }
+    });
+  });
+
+  const primaryTenant = emailVerificationToken.user.tenants[0]?.tenant ?? null;
+
+  return {
+    user: {
+      id: emailVerificationToken.user.id,
+      email: emailVerificationToken.user.email,
+      name: emailVerificationToken.user.name,
+      emailVerifiedAt: verifiedAt
+    },
+    tenant: primaryTenant
+  };
 }
 
 export async function replaceSessionTenant(reply: FastifyReply, request: FastifyRequest, tenantId: string) {
@@ -174,7 +376,8 @@ export async function requireSession(request: FastifyRequest, reply: FastifyRepl
     user: {
       id: session.user.id,
       email: session.user.email,
-      name: session.user.name
+      name: session.user.name,
+      emailVerifiedAt: session.user.emailVerifiedAt
     },
     tenants: session.user.tenants
   };

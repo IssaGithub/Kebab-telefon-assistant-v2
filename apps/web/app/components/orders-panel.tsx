@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { fetchJson, formatDate, formatMoney, type OrderRecord } from "../lib/api";
 import { useSelectedRestaurant } from "./use-selected-restaurant";
 
+const REFRESH_INTERVAL_MS = 5000;
+
 export function OrdersPanel() {
   const { restaurantId } = useSelectedRestaurant();
   const [orders, setOrders] = useState<OrderRecord[]>([]);
@@ -37,9 +39,13 @@ export function OrdersPanel() {
     }
 
     void load();
+    const interval = window.setInterval(() => {
+      void load();
+    }, REFRESH_INTERVAL_MS);
 
     return () => {
       active = false;
+      window.clearInterval(interval);
     };
   }, [restaurantId]);
 
@@ -65,6 +71,14 @@ export function OrdersPanel() {
 
             <div className="order-meta">
               <div className="muted">Telefon: {order.customerPhone ?? "nicht hinterlegt"}</div>
+              <div className="muted">Erfuellung: {order.fulfillmentType === "delivery" ? "Lieferung" : "Abholung"}</div>
+              {order.deliveryAddress ? <div className="muted">Adresse: {order.deliveryAddress}</div> : null}
+              {order.call ? (
+                <div className="muted">
+                  Anruf: {order.call.status}
+                  {order.call.callerNumber ? ` · ${order.call.callerNumber}` : ""}
+                </div>
+              ) : null}
             </div>
 
             <div className="button-row">

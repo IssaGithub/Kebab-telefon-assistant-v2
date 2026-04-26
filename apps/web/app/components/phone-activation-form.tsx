@@ -58,7 +58,9 @@ export function PhoneActivationForm() {
     });
 
     try {
-      const payload = await fetchJson<{ e164: string; provider: string }>("/v1/phone-numbers/activate", {
+      const payload = await fetchJson<{ e164: string; provider: string; livekitDispatchRuleId?: string | null }>(
+        "/v1/phone-numbers/activate",
+        {
         method: "POST",
         body: JSON.stringify({
           restaurantId,
@@ -67,11 +69,14 @@ export function PhoneActivationForm() {
           sipTrunkId,
           setActive: true
         })
-      });
+        }
+      );
 
       setState({
         status: "success",
-        message: `${payload.e164} ist aktiv fuer ${payload.provider}.`
+        message: payload.livekitDispatchRuleId
+          ? `${payload.e164} ist aktiv fuer ${payload.provider}. Inbound-Routing wurde mit LiveKit synchronisiert.`
+          : `${payload.e164} ist aktiv fuer ${payload.provider}.`
       });
     } catch {
       setState({
