@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "set -a && . ../../.env && set +a && tsx watch src/index.ts dev",
+    "dev": "if [ -f ../../.env ]; then set -a; . ../../.env; set +a; fi; tsx watch src/index.ts dev",
     "build": "tsc -p tsconfig.json",
-    "start": "set -a && . ../../.env && set +a && node dist/index.js start",
+    "start": "if [ -f ../../.env ]; then set -a; . ../../.env; set +a; fi; node dist/index.js start",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

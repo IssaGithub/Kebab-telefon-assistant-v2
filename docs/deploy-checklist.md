@@ -4,7 +4,9 @@ This checklist assumes the recommended Hetzner layout for this repository:
 
 - `app-01`: `caddy`, `web`, `api`, `agent`
 - `db-01`: `postgres`, `redis`
-- `LiveKit`, `OpenAI`, and `Stripe` stay external
+- `LiveKit Cloud`, the SIP trunk or phone number provider, `OpenAI`, and `Stripe` stay external
+
+For the MVP, do not self-host LiveKit SIP on Hetzner. Use LiveKit Cloud first so the app deployment only needs outbound connectivity to LiveKit and inbound HTTPS for API/webhooks. Self-hosting LiveKit server plus LiveKit SIP later is possible, but it is a separate media infrastructure task with SIP, RTP, WebRTC, TURN/STUN, and firewall work.
 
 ## 1. Provision Infrastructure
 
@@ -55,12 +57,18 @@ REDIS_URL=redis://10.0.1.10:6379
 
 API_PORT=4000
 WEB_PORT=3000
+APP_DOMAIN=app.yourdomain.com
+API_DOMAIN=api.yourdomain.com
+CADDY_EMAIL=ops@yourdomain.com
 NEXT_PUBLIC_API_URL=https://api.yourdomain.com
+INTERNAL_API_URL=http://api:4000
+WEB_APP_URL=https://app.yourdomain.com
 
 LIVEKIT_URL=wss://your-livekit-endpoint
 LIVEKIT_API_KEY=...
 LIVEKIT_API_SECRET=...
 LIVEKIT_SIP_OUTBOUND_TRUNK_ID=...
+LIVEKIT_AGENT_NAME=kebab-phone-agent
 
 OPENAI_API_KEY=...
 STRIPE_SECRET_KEY=...
@@ -70,6 +78,8 @@ WEB_IMAGE=ghcr.io/<your-github-owner>/kebab-telefon-assistant-web:latest
 API_IMAGE=ghcr.io/<your-github-owner>/kebab-telefon-assistant-api:latest
 AGENT_IMAGE=ghcr.io/<your-github-owner>/kebab-telefon-assistant-agent:latest
 ```
+
+`NEXT_PUBLIC_API_URL` is the public browser-facing API URL. `INTERNAL_API_URL` is used by server-side Next.js code inside Docker. `WEB_APP_URL` is used when the API builds login, verification, and password-reset links.
 
 Create `.env.db` on `db-01`:
 
@@ -99,21 +109,7 @@ docker compose --env-file .env.db -f infra/docker-compose.db.yml ps
 
 ## 6. Configure Caddy
 
-Update [infra/caddy/Caddyfile](/Users/issa/Documents/repos/Kebab-telefon-assistant-v2/infra/caddy/Caddyfile:1) with your real domains and operations email:
-
-```caddy
-{
-  email ops@yourdomain.com
-}
-
-app.yourdomain.com {
-  reverse_proxy web:3000
-}
-
-api.yourdomain.com {
-  reverse_proxy api:4000
-}
-```
+[infra/caddy/Caddyfile](/Users/issa/Documents/repos/Kebab-telefon-assistant-v2/infra/caddy/Caddyfile:1) reads `APP_DOMAIN`, `API_DOMAIN`, and `CADDY_EMAIL` from `.env`, so no server-side Caddyfile edit is needed for normal production deploys.
 
 ## 7. Deploy Application Services
 
@@ -121,9 +117,9 @@ On `app-01`:
 
 ```bash
 echo $GHCR_TOKEN | docker login ghcr.io -u <your-github-username> --password-stdin
-docker compose -f infra/docker-compose.prod.yml pull
-docker compose --profile ops -f infra/docker-compose.prod.yml run --rm migrate
-docker compose -f infra/docker-compose.prod.yml up -d
+docker compose --env-file .env -f infra/docker-compose.prod.yml pull
+docker compose --env-file .env --profile ops -f infra/docker-compose.prod.yml run --rm migrate
+docker compose --env-file .env -f infra/docker-compose.prod.yml up -d
 ```
 
 If you want GitHub Actions to deploy automatically after a successful `main` build, add these repository secrets first:
@@ -145,19 +141,49 @@ ssh-keyscan -H <app-01-ip-or-hostname>
 Verify:
 
 ```bash
-docker compose -f infra/docker-compose.prod.yml ps
+docker compose --env-file .env -f infra/docker-compose.prod.yml ps
 curl -f https://api.yourdomain.com/health
 ```
 
-## 8. Post-Deploy Checks
+## 8. Configure LiveKit Cloud Telephony
+
+1. In LiveKit Cloud, create or select the project matching `LIVEKIT_URL`.
+2. Add a SIP trunk provider or LiveKit phone number.
+3. Create an inbound trunk for the phone number/provider.
+4. Configure LiveKit webhooks to send events to:
+
+```text
+https://api.yourdomain.com/v1/livekit/webhook
+```
+
+5. Confirm the `agent` container is running with `LIVEKIT_AGENT_NAME=kebab-phone-agent`.
+6. In the dashboard, activate a restaurant number with provider `LiveKit SIP` and paste the LiveKit inbound trunk ID into `SIP Trunk ID`.
+7. Call the number. The expected flow is:
+
+```text
+phone call -> LiveKit SIP -> per-call room -> kebab-phone-agent -> API webhook -> dashboard call/order rows
+```
+
+Real-call acceptance checklist:
+
+- `docker compose --env-file .env -f infra/docker-compose.prod.yml ps` shows `api`, `web`, and `agent` running.
+- `https://api.yourdomain.com/health` returns `200`.
+- `/v1/system/capabilities` reports telephony as configured after login.
+- Activating a restaurant number stores a `livekitDispatchRuleId`.
+- The LiveKit Cloud room for the call shows one SIP participant and one `kebab-phone-agent` participant.
+- The dashboard `Anrufe` page shows a new inbound call within a few seconds.
+- The dashboard `Bestellungen` page shows a linked draft order.
+
+## 9. Post-Deploy Checks
 
 1. Open `https://app.yourdomain.com`.
 2. Verify `https://api.yourdomain.com/health` returns `200`.
 3. Create a test restaurant through the UI or API.
 4. Check `/v1/system/capabilities` and confirm whether telephony shows configured or intentionally disabled.
-5. If LiveKit is configured, test outbound test call creation.
+5. If LiveKit is configured, test inbound calling by activating a phone number and confirming the call appears under `Anrufe`.
+6. If `LIVEKIT_SIP_OUTBOUND_TRUNK_ID` is configured, test outbound test call creation.
 
-## 9. Backups and Monitoring
+## 10. Backups and Monitoring
 
 Set up before onboarding real customers:
 
@@ -169,14 +195,14 @@ Set up before onboarding real customers:
 
 The repository includes a backup helper at [scripts/backup-postgres.sh](/Users/issa/Documents/repos/Kebab-telefon-assistant-v2/scripts/backup-postgres.sh:1) and additional operations notes in [docs/operations.md](/Users/issa/Documents/repos/Kebab-telefon-assistant-v2/docs/operations.md:1).
 
-## 10. Release Routine
+## 11. Release Routine
 
 For each deployment:
 
 ```bash
-docker compose -f infra/docker-compose.prod.yml pull
-docker compose --profile ops -f infra/docker-compose.prod.yml run --rm migrate
-docker compose -f infra/docker-compose.prod.yml up -d
+docker compose --env-file .env -f infra/docker-compose.prod.yml pull
+docker compose --env-file .env --profile ops -f infra/docker-compose.prod.yml run --rm migrate
+docker compose --env-file .env -f infra/docker-compose.prod.yml up -d
 ```
 
 If the schema changes, do not skip the migration step.

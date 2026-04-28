@@ -100,6 +100,18 @@ Abholung bitte, meine Nummer ist +491701234567 und das war alles
 
 ## LiveKit Inbound Calls
 
+For the MVP, use LiveKit Cloud plus a SIP trunk or LiveKit phone number provider. This keeps LiveKit media and SIP operations outside the Hetzner app deployment while the product flow is still being validated.
+
+Minimum production setup:
+
+1. Create a LiveKit Cloud project.
+2. Set `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, and `LIVEKIT_AGENT_NAME`.
+3. Configure a SIP trunk provider or LiveKit phone number in LiveKit Cloud.
+4. Create an inbound SIP trunk in LiveKit Cloud for that phone number/provider.
+5. Start the app `agent` service with the same `LIVEKIT_AGENT_NAME`.
+6. In the dashboard, activate the restaurant phone number with provider `LiveKit SIP` and paste the inbound trunk ID into `SIP Trunk ID`.
+7. Configure LiveKit webhooks to call `https://api.yourdomain.com/v1/livekit/webhook`.
+
 The repository now includes a real inbound webhook entrypoint:
 
 ```text
@@ -107,6 +119,7 @@ POST /v1/livekit/webhook
 ```
 
 When a restaurant phone number is activated with provider `LiveKit SIP`, the API attempts to create a LiveKit SIP dispatch rule for that number and stores the returned dispatch rule ID on the phone record.
+The dispatch rule uses an individual room per caller, attaches restaurant metadata/attributes, and explicitly dispatches the configured LiveKit agent into the room.
 
 Inbound webhook events currently do this:
 
@@ -123,6 +136,8 @@ x-livekit-skip-auth: 1
 ```
 
 That is only intended for local development to simulate inbound SIP events.
+
+For later cost/control work, self-hosting LiveKit server and LiveKit SIP server on Hetzner is possible, but it should be treated as a separate infrastructure project because it requires public SIP/WebRTC/RTP ports, TURN/STUN planning, and media firewall validation.
 
 ## First Milestone
 
@@ -157,7 +172,8 @@ Example onboarding request:
   },
   "owner": {
     "email": "owner@example.com",
-    "name": "Demo Owner"
+    "name": "Demo Owner",
+    "password": "supersecret"
   },
   "restaurant": {
     "name": "Demo Kebab",

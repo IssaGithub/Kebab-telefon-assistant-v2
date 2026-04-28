@@ -1,7 +1,9 @@
 FROM node:22-alpine AS deps
 WORKDIR /app
+RUN apk add --no-cache openssl
 COPY package*.json ./
 COPY apps/agent/package.json apps/agent/package.json
+COPY packages/db/package.json packages/db/package.json
 COPY packages/shared/package.json packages/shared/package.json
 RUN npm ci
 
@@ -9,15 +11,20 @@ FROM deps AS builder
 WORKDIR /app
 COPY tsconfig.base.json ./
 COPY apps/agent apps/agent
+COPY packages/db packages/db
 COPY packages/shared packages/shared
+RUN npm run db:generate -w @restaurant-ai/db
 RUN npm run build -w @restaurant-ai/shared
+RUN npm run build -w @restaurant-ai/db
 RUN npm run build -w @restaurant-ai/agent
 
 FROM node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+RUN apk add --no-cache openssl
 COPY --from=deps /app/package*.json ./
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=builder /app/apps/agent apps/agent
+COPY --from=builder /app/packages/db packages/db
 COPY --from=builder /app/packages/shared packages/shared
 CMD ["npm", "run", "start", "-w", "@restaurant-ai/agent"]

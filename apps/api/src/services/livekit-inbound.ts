@@ -1,10 +1,17 @@
 import { CallStatus } from "@prisma/client";
 import { prisma } from "@restaurant-ai/db";
-import { SipClient, type WebhookEvent, WebhookReceiver } from "livekit-server-sdk";
+import {
+  RoomAgentDispatch,
+  RoomConfiguration,
+  SipClient,
+  type WebhookEvent,
+  WebhookReceiver
+} from "livekit-server-sdk";
 
 const LIVEKIT_PARTICIPANT_KIND_SIP = 3;
 
 const inboundConfigKeys = ["LIVEKIT_URL", "LIVEKIT_API_KEY", "LIVEKIT_API_SECRET"] as const;
+const defaultAgentName = "kebab-phone-agent";
 
 type InboundConfigKey = (typeof inboundConfigKeys)[number];
 
@@ -45,6 +52,26 @@ function roomPrefixForRestaurant(restaurantId: string) {
 
 function ruleNameForPhone(phoneNumberId: string) {
   return `restaurant-phone-${phoneNumberId}`;
+}
+
+function roomConfigForInboundAgent(phoneNumber: {
+  id: string;
+  restaurantId: string;
+  e164: string;
+}) {
+  return new RoomConfiguration({
+    agents: [
+      new RoomAgentDispatch({
+        agentName: process.env.LIVEKIT_AGENT_NAME ?? defaultAgentName,
+        metadata: JSON.stringify({
+          source: "sip-inbound",
+          restaurantId: phoneNumber.restaurantId,
+          phoneNumberId: phoneNumber.id,
+          calledNumber: phoneNumber.e164
+        })
+      })
+    ]
+  });
 }
 
 function tryParseMetadata(metadata: string | undefined) {
@@ -150,7 +177,8 @@ export async function syncInboundDispatchRule(phoneNumber: {
         restaurantId: phoneNumber.restaurantId,
         phoneNumberId: phoneNumber.id,
         calledNumber: phoneNumber.e164
-      }
+      },
+      roomConfig: roomConfigForInboundAgent(phoneNumber)
     }
   );
 
